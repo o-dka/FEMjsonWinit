@@ -20,7 +20,6 @@ pub struct  FpsCamera {
   yaw: Rad<f32>,
   pitch: Rad<f32>,
 }
- 
 
 impl FpsCamera {
   pub fn new<V: Into<Point3<f32>>,Y: Into<Rad<f32>>,P: Into<Rad<f32>>,>
@@ -105,7 +104,6 @@ pub struct FpsController {
 }
 
 
-
 impl FpsController {
     pub fn new(speed: f32, sensitivity: f32) -> Self {
         Self {
@@ -169,15 +167,15 @@ impl FpsController {
         };
     }
 
-    pub fn update_camera(&mut self, camera: &mut FpsCamera, dt: std::time::Duration) {
-        let dt = dt.as_secs_f32();
+    pub fn update_camera(&mut self, camera: &mut FpsCamera) {
+        // let dt = dt.as_secs_f32();
 
         // Move forward/backward and left/right
         let (yaw_sin, yaw_cos) = camera.yaw.0.sin_cos();
         let forward = Vector3::new(yaw_cos, 0.0, yaw_sin).normalize();
         let right = Vector3::new(-yaw_sin, 0.0, yaw_cos).normalize();
-        camera.pos += forward * (self.amount_forward - self.amount_backward) * self.speed * dt;
-        camera.pos += right * (self.amount_right - self.amount_left) * self.speed * dt;
+        camera.pos += forward * (self.amount_forward - self.amount_backward) * self.speed ;
+        camera.pos += right * (self.amount_right - self.amount_left) * self.speed ;
 
         // Move in/out (aka. "zoom")
         // Note: this isn't an actual zoom. The camera's position
@@ -185,16 +183,16 @@ impl FpsController {
         // to get closer to an object you want to focus on.
         let (pitch_sin, pitch_cos) = camera.pitch.0.sin_cos();
         let scrollward = Vector3::new(pitch_cos * yaw_cos, pitch_sin, pitch_cos * yaw_sin).normalize();
-        camera.pos += scrollward * self.scroll * self.speed * self.sensitivity * dt;
+        camera.pos += scrollward * self.scroll * self.speed * self.sensitivity ;
         self.scroll = 0.0;
 
         // Move up/down. Since we don't use roll, we can just
         // modify the y coordinate directly.
-        camera.pos.y += (self.amount_up - self.amount_down) * self.speed * dt;
+        camera.pos.y += (self.amount_up - self.amount_down) * self.speed;
 
         // Rotate
-        camera.yaw += Rad(self.rotate_horizontal)* dt / self.sensitivity ;
-        camera.pitch += Rad(-self.rotate_vertical)*dt / self.sensitivity ;
+        camera.yaw += Rad(self.rotate_horizontal)* self.sensitivity ;
+        camera.pitch += Rad(-self.rotate_vertical)* self.sensitivity ;
 
         // If process_mouse isn't called every frame, these values
         // will not get set to zero, and the camera will rotate

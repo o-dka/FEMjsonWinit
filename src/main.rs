@@ -12,7 +12,7 @@ fn main() {
     let window = WindowBuilder::new().build(&event_loop).unwrap();
     window.set_title(&*format!("{}", "cube with distinct face colors"));
     let mut state = pollster::block_on( state::State::new(&window));
-    let strt_time = std::time::Instant::now(); // change later for a 3rd party crate
+    // let strt_time = std::time::Instant::now(); // change later for a 3rd party crate
     event_loop.run(move |event, _, control_flow| {
         match event {
             Event::DeviceEvent {
@@ -48,8 +48,7 @@ fn main() {
                 }
             }
             Event::RedrawRequested(_) => {
-                let now =  std::time::Instant::now() ; // same thing here, change for a 3rd party crate
-                state.update(now-strt_time);
+                state.update();
                 match state.render() {
                     Ok(_) => {}
                     Err(wgpu::SurfaceError::Lost) => state.resize(state.init.size),

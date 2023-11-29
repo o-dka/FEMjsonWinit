@@ -19,7 +19,6 @@ struct Output {
 @vertex
 fn vs_main(@location(0) pos: vec4<f32>, @location(1) color: vec4<f32>) -> Output {
     var output: Output;
-    // output.Position= uniforms.mvpMatrix * pos;
     output.Position = camera.view_proj * pos; 
     output.vColor = color;
     return output;

@@ -10,16 +10,16 @@ use self::camera::{FpsCamera, FpsController, Projection, CameraUniform};
 
 //  TODO :
 //  Implement a better 3d camera [v] 
-//  Instances of objects  []
 //  Implement 2 basic objects ( some type of prism and shpere) []
+//  Instances of objects  []
 //  Implement some type of AA (optional)
 
 mod init;
 mod vertex_data;
 mod camera;
 
-const CAMERA_MOVE_SPEED:f32  = 0.5;
-const CAMERA_SENSITIVITY:f32 = 10.5;
+const CAMERA_MOVE_SPEED:f32  = 0.1;
+const CAMERA_SENSITIVITY:f32 = 0.01;
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, Pod, Zeroable)]
@@ -72,8 +72,6 @@ impl Vertex {
         }
     }
 }
-
-
 
 
 impl State {
@@ -153,7 +151,7 @@ impl State {
                 },
                 fragment: Some(wgpu::FragmentState {
                     module: &shader,
-                    entry_point: "fs_main",
+                    entry_point: "fs_main", 
                     targets: &[Some(wgpu::ColorTargetState {
                         format: init.config.format,
                         blend: Some(wgpu::BlendState {
@@ -248,18 +246,16 @@ impl State {
             }
             WindowEvent::MouseInput {   
                 button: winit::event::MouseButton::Right,
-                // state,
             ..} => {
                 self.controller.set_to_origin(&mut self.camera);
-                // let _ =  *state == ElementState::Pressed;
                 true
             }
             _ => false,
         }
     }
 
-    pub fn update(&mut self, td: std::time::Duration) {
-        self.controller.update_camera(&mut self.camera, td);
+    pub fn update(&mut self) {
+        self.controller.update_camera(&mut self.camera);
         self.camera_uniform
             .update_view_proj(&self.camera, &self.projection);
         self.init.queue.write_buffer(
@@ -314,7 +310,6 @@ impl State {
                         store: true,
                     },
                 })],
-                //depth_stencil_attachment: None,
                 depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
                     view: &depth_view,
                     depth_ops: Some(wgpu::Operations {
@@ -328,7 +323,6 @@ impl State {
             render_pass.set_pipeline(&self.pipeline);
             render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
             render_pass.set_bind_group(0, &self.uniform_bind_group, &[]);
-            // render_pass.set_index_buffer(self.slice(..), wgpu::IndexFormat::Uint16);
             render_pass.draw(0..36, 0..1);
         }
 
