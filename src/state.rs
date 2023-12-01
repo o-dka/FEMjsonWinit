@@ -9,10 +9,12 @@ use winit::{
 use self::camera::{FpsCamera, FpsController, Projection, CameraUniform};
 
 //  TODO :
-//  Implement a better 3d camera [v] 
-//  Implement 2 basic objects ( some type of prism and shpere) []
-//  Instances of objects  []
-//  Implement some type of AA (optional)
+//  1.Implement a better 3d camera [v] 
+//  2. Implement a line [] 
+//      2.1 Instances of said line []
+//  3. A parser of own 3d plot file format 
+//     or just use vtk if it works []
+//  Some type of AA (optional)
 
 mod init;
 mod vertex_data;
@@ -307,17 +309,19 @@ impl State {
                             b: 0.314,
                             a: 1.0,
                         }),
-                        store: true,
+                        store: wgpu::StoreOp::Store
                     },
                 })],
                 depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
                     view: &depth_view,
                     depth_ops: Some(wgpu::Operations {
                         load: wgpu::LoadOp::Clear(1.0),
-                        store: false,
+                        store: wgpu::StoreOp::Discard,
                     }),
                     stencil_ops: None,
                 }),
+                timestamp_writes : None,
+                occlusion_query_set: None,
             });
 
             render_pass.set_pipeline(&self.pipeline);
