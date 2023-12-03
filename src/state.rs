@@ -1,36 +1,32 @@
-use std::{mem,iter};
-use wgpu::{self, util::DeviceExt};
-use bytemuck::{cast_slice, Pod, Zeroable};
+use std::iter;
+use wgpu:: util::DeviceExt;
+use bytemuck::cast_slice;
 use winit::{
     event::{ElementState, KeyboardInput, WindowEvent},
     window::Window,
 };
 
 use self::camera::{FpsCamera, FpsController, Projection, CameraUniform};
-
+use self::td_comp::{Vertex,TdObject};
 //  TODO :
 //  1.Implement a better 3d camera [v] 
 //  2. Implement a line [] 
 //      2.1 Instances of said line []
 //  3. A parser of own 3d plot file format 
-//     or just use vtk if it works []
-//  Some type of AA (optional)
+//     or just use vtk if it works [v ( own parser )]
+//  Some type of AA (optional) [ v ]
 
 mod init;
-mod vertex_data;
+mod td_comp;
 mod camera;
 
 const CAMERA_MOVE_SPEED:f32  = 0.1;
 const CAMERA_SENSITIVITY:f32 = 0.01;
 
-#[repr(C)]
-#[derive(Copy, Clone, Debug, Pod, Zeroable)]
-struct Vertex {
-    position: [f32; 4],
-    color: [f32; 4],
-}
+
 
 pub struct State {
+    obj : TdObject,// Model 
     // Camera vars
     camera: FpsCamera,
     camera_uniform: CameraUniform,
@@ -46,40 +42,11 @@ pub struct State {
 
 }
 
-fn vertex(p: [i8; 3], c: [i8; 3]) -> Vertex {
-    Vertex {
-        position: [p[0] as f32, p[1] as f32, p[2] as f32, 1.0],
-        color: [c[0] as f32, c[1] as f32, c[2] as f32, 1.0],
-    }
-}
-
-fn create_vertices() -> Vec<Vertex> {
-    let pos = vertex_data::cube_positions();
-    let col = vertex_data::cube_colors();
-    let mut data: Vec<Vertex> = Vec::with_capacity(pos.len());
-    for i in 0..pos.len() {
-        data.push(vertex(pos[i], col[i]));
-    }
-    data.to_vec()
-}
-
-impl Vertex {
-    const ATTRIBUTES: [wgpu::VertexAttribute; 2] =
-        wgpu::vertex_attr_array![0=>Float32x4, 1=>Float32x4];
-    fn desc<'a>() -> wgpu::VertexBufferLayout<'a> {
-        wgpu::VertexBufferLayout {
-            array_stride: mem::size_of::<Vertex>() as wgpu::BufferAddress,
-            step_mode: wgpu::VertexStepMode::Vertex,
-            attributes: &Self::ATTRIBUTES,
-        }
-    }
-}
-
 
 impl State {
     pub async fn new(window: &Window) -> Self {
         let init = init::InitWgpu::init_wgpu(window).await;
-
+        let obj = TdObject::new();
         let camera = FpsCamera::new((0.0, 5.0, 10.0), cgmath::Deg(-90.0), cgmath::Deg(-20.0));
         let projection = Projection::new(init.config.width, init.config.height, cgmath::Deg(45.0), 0.1, 100.0);
         let controller = FpsController::new(CAMERA_MOVE_SPEED, CAMERA_SENSITIVITY);
@@ -139,6 +106,7 @@ impl State {
                     &uniform_bind_group_layout, 
                 ],
                 push_constant_ranges: &[],
+
             });
 
         let pipeline = init
@@ -166,7 +134,7 @@ impl State {
                 primitive: wgpu::PrimitiveState {
                     topology: wgpu::PrimitiveTopology::TriangleList,
                     strip_index_format: None,
-
+                    // polygon_mode : wgpu::PolygonMode::Line,
                     ..Default::default()
                 },
                 //depth_stencil: None,
@@ -177,7 +145,10 @@ impl State {
                     stencil: wgpu::StencilState::default(),
                     bias: wgpu::DepthBiasState::default(),
                 }),
-                multisample: wgpu::MultisampleState::default(),
+                multisample: wgpu::MultisampleState{
+                    count : 1,
+                    ..Default::default()
+                },
                 multiview: None,
             });
 
@@ -185,13 +156,14 @@ impl State {
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("Vertex Buffer"),
-                contents: cast_slice(&create_vertices()),
+                contents: cast_slice(&obj.vertices), // was a pointer to create vertices function before 
                 usage: wgpu::BufferUsages::VERTEX,
             });
 
     
 
         Self {
+            obj,
             camera,
             camera_uniform,
             camera_buffer,
@@ -214,7 +186,6 @@ impl State {
             self.init
                 .surface
                 .configure(&self.init.device, &self.init.config);
-
                 self.projection.resize(new_size.width, new_size.height);
                 self.init.size = new_size;
                 self.init.config.width = new_size.width;
@@ -327,7 +298,7 @@ impl State {
             render_pass.set_pipeline(&self.pipeline);
             render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
             render_pass.set_bind_group(0, &self.uniform_bind_group, &[]);
-            render_pass.draw(0..36, 0..1);
+            render_pass.draw(0..self.obj.vertices.len() as u32 , 0..1);
         }
 
         self.init.queue.submit(iter::once(encoder.finish()));
