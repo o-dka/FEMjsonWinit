@@ -44,9 +44,9 @@ pub struct State {
 
 
 impl State {
-    pub async fn new(window: &Window) -> Self {
+    pub async fn new(window: &Window,filename : &str) -> Self {
         let init = init::InitWgpu::init_wgpu(window).await;
-        let obj = TdObject::new();
+        let obj = TdObject::new(filename);
         let camera = FpsCamera::new((0.0, 5.0, 10.0), cgmath::Deg(-90.0), cgmath::Deg(-20.0));
         let projection = Projection::new(init.config.width, init.config.height, cgmath::Deg(45.0), 0.1, 100.0);
         let controller = FpsController::new(CAMERA_MOVE_SPEED, CAMERA_SENSITIVITY);
@@ -131,8 +131,8 @@ impl State {
                         write_mask: wgpu::ColorWrites::ALL,
                     })],
                 }),
-                primitive: wgpu::PrimitiveState {
-                    topology: wgpu::PrimitiveTopology::TriangleList,
+                primitive: wgpu::PrimitiveState { // look into here on how to create a better constructor 
+                    topology: wgpu::PrimitiveTopology::TriangleStrip, // this in particular!!
                     strip_index_format: None,
                     // polygon_mode : wgpu::PolygonMode::Line,
                     ..Default::default()
@@ -255,7 +255,7 @@ impl State {
             dimension: wgpu::TextureDimension::D2,
             format: wgpu::TextureFormat::Depth24Plus,
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
-            label: None,
+            label: Some("depth texture"),
             view_formats: &[],
         });
         let depth_view = depth_texture.create_view(&wgpu::TextureViewDescriptor::default());

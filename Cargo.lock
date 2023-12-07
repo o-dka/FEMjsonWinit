@@ -404,6 +404,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "femjsonwinit"
+version = "0.0.2"
+dependencies = [
+ "bytemuck",
+ "cgmath",
+ "env_logger",
+ "log",
+ "pollster",
+ "serde",
+ "serde_json",
+ "wgpu",
+ "winit",
+]
+
+[[package]]
 name = "flate2"
 version = "1.0.28"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1385,21 +1400,6 @@ name = "static_assertions"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
-
-[[package]]
-name = "stlviewerwinit"
-version = "0.0.2"
-dependencies = [
- "bytemuck",
- "cgmath",
- "env_logger",
- "log",
- "pollster",
- "serde",
- "serde_json",
- "wgpu",
- "winit",
-]
 
 [[package]]
 name = "strict-num"

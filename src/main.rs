@@ -4,15 +4,21 @@ use winit::{
     window::WindowBuilder,
 };
 
+use std::{env, process::exit};
+
 pub mod state;
 
 fn main() {
     env_logger::init();
+    let args : Vec<String> = env::args().collect();
+    if args.is_empty() {
+        println!("No arguments provided");
+        exit(-1);
+    }
     let event_loop = EventLoop::new();
     let window = WindowBuilder::new().build(&event_loop).unwrap();
     window.set_title(&*format!("{}", "cube with distinct face colors"));
-    let mut state = pollster::block_on( state::State::new(&window));
-    // let strt_time = std::time::Instant::now(); // change later for a 3rd party crate
+    let mut state = pollster::block_on( state::State::new(&window,&args[1]));
     event_loop.run(move |event, _, control_flow| {
         match event {
             Event::DeviceEvent {
