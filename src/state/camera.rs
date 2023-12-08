@@ -1,9 +1,9 @@
 use cgmath::*;
 use winit::dpi::PhysicalPosition;
 use winit::event::*;
-// instant::Duration not needed yet... use std::time::Instant instead
-use std::f32::consts::FRAC_PI_2;
 
+use std::f32::consts::FRAC_PI_2;
+// credit goes to sotrh on github for providing this code in theirs "learn wgpu" tutorial
 #[rustfmt::skip]
 pub const OPENGL_TO_WGPU_MATRIX: cgmath::Matrix4<f32> = cgmath::Matrix4::new(
     1.0, 0.0, 0.0, 0.0,
@@ -168,7 +168,6 @@ impl FpsController {
     }
 
     pub fn update_camera(&mut self, camera: &mut FpsCamera) {
-        // let dt = dt.as_secs_f32();
 
         // Move forward/backward and left/right
         let (yaw_sin, yaw_cos) = camera.yaw.0.sin_cos();
@@ -179,24 +178,19 @@ impl FpsController {
 
         // Move in/out (aka. "zoom")
         // Note: this isn't an actual zoom. The camera's position
-        // changes when zooming. I've added this to make it easier
-        // to get closer to an object you want to focus on.
+        // changes when zooming.
         let (pitch_sin, pitch_cos) = camera.pitch.0.sin_cos();
         let scrollward = Vector3::new(pitch_cos * yaw_cos, pitch_sin, pitch_cos * yaw_sin).normalize();
         camera.pos += scrollward * self.scroll * self.speed * self.sensitivity ;
         self.scroll = 0.0;
 
-        // Move up/down. Since we don't use roll, we can just
-        // modify the y coordinate directly.
+        // Move up/down
         camera.pos.y += (self.amount_up - self.amount_down) * self.speed;
 
         // Rotate
         camera.yaw += Rad(self.rotate_horizontal)* self.sensitivity ;
         camera.pitch += Rad(-self.rotate_vertical)* self.sensitivity ;
 
-        // If process_mouse isn't called every frame, these values
-        // will not get set to zero, and the camera will rotate
-        // when moving in a non cardinal direction.
         self.rotate_horizontal = 0.0;
         self.rotate_vertical = 0.0;
 
@@ -210,9 +204,9 @@ impl FpsController {
     }
     
     pub fn set_to_origin(&self, camera : &mut FpsCamera) {
-        camera.pos = (0.0, 5.0, 10.0).into();
+        camera.pos = (0.0, 3.0, 0.0).into();
         camera.yaw = cgmath::Deg(-90.0).into();
-        camera.pitch = cgmath::Deg(-20.0).into();
+        camera.pitch = cgmath::Deg(-90.0).into();
     }
 
 }
@@ -220,8 +214,6 @@ impl FpsController {
 #[repr(C)]
 #[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct CameraUniform {
-    // We can't use cgmath with bytemuck directly so we'll have
-    // to convert the Matrix4 into a 4x4 f32 array
    pub  view_proj: [[f32; 4]; 4],
 }
 

@@ -3,18 +3,25 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 #[derive(Serialize, Deserialize)]
 pub struct TdObject {
-    pub vertices: Vec<Vertex>, // a vector of Vertex struct with their color info
-                               // pub conns : Vec<u32> ,  indices of the vertices
-                               // material // this provides union of material properties
+    pub vertices: Vec<Vertex>, // a vector of a Vertex struct (see line 29 or just go to type def in vscode)
+    pub indices : Vec<u16>      // indices of the vertices
+    // TODO : material   should provide a union of material properties  (steel,reinforced concrete, etc.)
+}
+#[derive(Serialize, Deserialize)]
+struct JsonIn {
+    vers : Vec<[i8;3]>,
+    inds : Vec<u16>
 }
 
 impl TdObject {
-    pub fn new(filename: &str) -> Self {
-        let file_data = fs::read_to_string(filename)
-            .expect("Unable to read file, check the file name provided.");
-        let json_data: Vec<[i8; 3]> = serde_json::from_str::<Vec<[i8; 3]>>(&file_data).unwrap();
-        let vertices = create_vertices(json_data.into());
-        TdObject { vertices }
+    pub fn new(filename : &str) -> Self {
+        let  file_data =fs::read_to_string(filename) 
+            .expect("FILE READ ERROR ");
+        
+        let json_data:JsonIn = serde_json::from_str(&file_data).unwrap();
+        let indices: Vec<u16> = json_data.inds;
+        let vertices = create_vertices(json_data.vers);
+        TdObject { vertices, indices }
     }
 }
 

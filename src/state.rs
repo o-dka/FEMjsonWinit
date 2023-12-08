@@ -10,11 +10,8 @@ use self::camera::{CameraUniform, FpsCamera, FpsController, Projection};
 use self::td_comp::{TdObject, Vertex};
 //  TODO :
 //  1.Implement a better 3d camera [v]
-//  2. Implement a line []
-//      2.1 Instances of said line []
-//  3. A parser of own 3d plot file format
+//  2. A parser of own 3d plot file format
 //     or just use vtk if it works [v ( own parser )]
-//  Some type of AA (optional) [ v ]
 
 mod camera;
 mod init;
@@ -33,9 +30,10 @@ pub struct State {
     pub mouse_pressed: bool,
     projection: camera::Projection,
     // wgpu vars
-    pub init: init::InitWgpu, // this one has config , etc.
+    pub init: init::InitWgpu, // this one has the config , etc.
     pipeline: wgpu::RenderPipeline,
     vertex_buffer: wgpu::Buffer,
+    index_buffer : wgpu::Buffer,
     uniform_bind_group: wgpu::BindGroup,
 }
 
@@ -43,7 +41,7 @@ impl State {
     pub async fn new(window: &Window, filename: &str) -> Self {
         let init = init::InitWgpu::init_wgpu(window).await;
         let obj = TdObject::new(filename);
-        let camera = FpsCamera::new((0.0, 5.0, 10.0), cgmath::Deg(-90.0), cgmath::Deg(-20.0));
+        let camera = FpsCamera::new((0.0, 3.0,0.0), cgmath::Deg(-90.0), cgmath::Deg(-90.0));
         let projection = Projection::new(
             init.config.width,
             init.config.height,
@@ -126,13 +124,10 @@ impl State {
                     })],
                 }),
                 primitive: wgpu::PrimitiveState {
-                    // look into here on how to create a better constructor
-                    topology: wgpu::PrimitiveTopology::TriangleStrip, // this in particular!!
+                    topology: wgpu::PrimitiveTopology::LineStrip, // this in particular!!
                     strip_index_format: None,
-                    // polygon_mode : wgpu::PolygonMode::Line,
                     ..Default::default()
                 },
-                //depth_stencil: None,
                 depth_stencil: Some(wgpu::DepthStencilState {
                     format: wgpu::TextureFormat::Depth24Plus,
                     depth_write_enabled: true,
@@ -151,9 +146,14 @@ impl State {
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("Vertex Buffer"),
-                contents: cast_slice(&obj.vertices), // was a pointer to create vertices function before
+                contents: cast_slice(&obj.vertices), 
                 usage: wgpu::BufferUsages::VERTEX,
             });
+        let index_buffer  = init .device .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Index Buffer"),
+            contents: cast_slice(&obj.indices),
+            usage : wgpu::BufferUsages::INDEX
+        });
 
         Self {
             obj,
@@ -164,6 +164,7 @@ impl State {
             init,
             pipeline,
             vertex_buffer,
+            index_buffer,
             projection,
             uniform_bind_group,
             mouse_pressed: false,
@@ -235,7 +236,6 @@ impl State {
     }
 
     pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
-        //let output = self.init.surface.get_current_frame()?.output;
         let output = self.init.surface.get_current_texture()?;
         let view = output
             .texture
@@ -293,8 +293,9 @@ impl State {
 
             render_pass.set_pipeline(&self.pipeline);
             render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
+            render_pass.set_index_buffer(self.index_buffer.slice(..),wgpu::IndexFormat::Uint16);
             render_pass.set_bind_group(0, &self.uniform_bind_group, &[]);
-            render_pass.draw(0..self.obj.vertices.len() as u32, 0..1);
+            render_pass.draw_indexed(0..self.obj.indices.len() as u32 , 0,0..1);
         }
 
         self.init.queue.submit(iter::once(encoder.finish()));
