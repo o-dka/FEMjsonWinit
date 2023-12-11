@@ -1,58 +1,58 @@
-use std::iter;
-use wgpu:: util::DeviceExt;
 use bytemuck::cast_slice;
+use std::iter;
+use wgpu::util::DeviceExt;
 use winit::{
     event::{ElementState, KeyboardInput, WindowEvent},
     window::Window,
 };
 
-use self::camera::{FpsCamera, FpsController, Projection, CameraUniform};
-use self::td_comp::{Vertex,TdObject};
+use self::camera::{CameraUniform, FpsCamera, FpsController, Projection};
+use self::td_comp::{TdObject, Vertex};
 //  TODO :
-//  1.Implement a better 3d camera [v] 
-//  2. Implement a line [] 
-//      2.1 Instances of said line []
-//  3. A parser of own 3d plot file format 
+//  1.Implement a better 3d camera [v]
+//  2. A parser of own 3d plot file format
 //     or just use vtk if it works [v ( own parser )]
-//  Some type of AA (optional) [ v ]
 
+mod camera;
 mod init;
 mod td_comp;
-mod camera;
 
-const CAMERA_MOVE_SPEED:f32  = 0.1;
-const CAMERA_SENSITIVITY:f32 = 0.01;
-
-
+const CAMERA_MOVE_SPEED: f32 = 0.1;
+const CAMERA_SENSITIVITY: f32 = 0.01;
 
 pub struct State {
-    obj : TdObject,// Model 
+    obj: TdObject, // Model
     // Camera vars
     camera: FpsCamera,
     camera_uniform: CameraUniform,
     camera_buffer: wgpu::Buffer,
     pub controller: FpsController,
     pub mouse_pressed: bool,
-    projection: camera::Projection,              
+    projection: camera::Projection,
     // wgpu vars
-    pub init: init::InitWgpu, // this one has config , etc.
+    pub init: init::InitWgpu, // this one has the config , etc.
     pipeline: wgpu::RenderPipeline,
     vertex_buffer: wgpu::Buffer,
+    index_buffer : wgpu::Buffer,
     uniform_bind_group: wgpu::BindGroup,
-
 }
 
-
 impl State {
-    pub async fn new(window: &Window,filename : &str) -> Self {
+    pub async fn new(window: &Window, filename: &str) -> Self {
         let init = init::InitWgpu::init_wgpu(window).await;
         let obj = TdObject::new(filename);
-        let camera = FpsCamera::new((0.0, 5.0, 10.0), cgmath::Deg(-90.0), cgmath::Deg(-20.0));
-        let projection = Projection::new(init.config.width, init.config.height, cgmath::Deg(45.0), 0.1, 100.0);
+        let camera = FpsCamera::new((0.0, 3.0,0.0), cgmath::Deg(-90.0), cgmath::Deg(-90.0));
+        let projection = Projection::new(
+            init.config.width,
+            init.config.height,
+            cgmath::Deg(45.0),
+            0.1,
+            100.0,
+        );
         let controller = FpsController::new(CAMERA_MOVE_SPEED, CAMERA_SENSITIVITY);
 
         let mut camera_uniform = CameraUniform::new();
-        camera_uniform.update_view_proj(&camera, &projection); 
+        camera_uniform.update_view_proj(&camera, &projection);
 
         let camera_buffer = init
             .device
@@ -68,33 +68,28 @@ impl State {
                 source: wgpu::ShaderSource::Wgsl(include_str!("shader.wgsl").into()),
             });
 
-        
         let uniform_bind_group_layout =
             init.device
                 .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                    entries: &[
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 0,
-                            visibility: wgpu::ShaderStages::VERTEX,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Uniform,
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
+                    entries: &[wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStages::VERTEX,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Uniform,
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
                         },
-                    ],
+                        count: None,
+                    }],
                     label: Some("Uniform Bind Group Layout"),
                 });
 
         let uniform_bind_group = init.device.create_bind_group(&wgpu::BindGroupDescriptor {
             layout: &uniform_bind_group_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: camera_buffer.as_entire_binding(),
-                },
-            ],
+            entries: &[wgpu::BindGroupEntry {
+                binding: 0,
+                resource: camera_buffer.as_entire_binding(),
+            }],
             label: Some("Uniform Bind Group"),
         });
 
@@ -102,11 +97,8 @@ impl State {
             .device
             .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Render Pipeline Layout"),
-                bind_group_layouts: &[
-                    &uniform_bind_group_layout, 
-                ],
+                bind_group_layouts: &[&uniform_bind_group_layout],
                 push_constant_ranges: &[],
-
             });
 
         let pipeline = init
@@ -121,7 +113,7 @@ impl State {
                 },
                 fragment: Some(wgpu::FragmentState {
                     module: &shader,
-                    entry_point: "fs_main", 
+                    entry_point: "fs_main",
                     targets: &[Some(wgpu::ColorTargetState {
                         format: init.config.format,
                         blend: Some(wgpu::BlendState {
@@ -131,13 +123,11 @@ impl State {
                         write_mask: wgpu::ColorWrites::ALL,
                     })],
                 }),
-                primitive: wgpu::PrimitiveState { // look into here on how to create a better constructor 
-                    topology: wgpu::PrimitiveTopology::TriangleStrip, // this in particular!!
+                primitive: wgpu::PrimitiveState {
+                    topology: wgpu::PrimitiveTopology::LineStrip, // this in particular!!
                     strip_index_format: None,
-                    // polygon_mode : wgpu::PolygonMode::Line,
                     ..Default::default()
                 },
-                //depth_stencil: None,
                 depth_stencil: Some(wgpu::DepthStencilState {
                     format: wgpu::TextureFormat::Depth24Plus,
                     depth_write_enabled: true,
@@ -145,8 +135,8 @@ impl State {
                     stencil: wgpu::StencilState::default(),
                     bias: wgpu::DepthBiasState::default(),
                 }),
-                multisample: wgpu::MultisampleState{
-                    count : 1,
+                multisample: wgpu::MultisampleState {
+                    count: 1,
                     ..Default::default()
                 },
                 multiview: None,
@@ -156,11 +146,14 @@ impl State {
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("Vertex Buffer"),
-                contents: cast_slice(&obj.vertices), // was a pointer to create vertices function before 
+                contents: cast_slice(&obj.vertices), 
                 usage: wgpu::BufferUsages::VERTEX,
             });
-
-    
+        let index_buffer  = init .device .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Index Buffer"),
+            contents: cast_slice(&obj.indices),
+            usage : wgpu::BufferUsages::INDEX
+        });
 
         Self {
             obj,
@@ -171,6 +164,7 @@ impl State {
             init,
             pipeline,
             vertex_buffer,
+            index_buffer,
             projection,
             uniform_bind_group,
             mouse_pressed: false,
@@ -186,15 +180,17 @@ impl State {
             self.init
                 .surface
                 .configure(&self.init.device, &self.init.config);
-                self.projection.resize(new_size.width, new_size.height);
-                self.init.size = new_size;
-                self.init.config.width = new_size.width;
-                self.init.config.height = new_size.height;
-                self.init.surface.configure(&self.init.device, &self.init.config);
+            self.projection.resize(new_size.width, new_size.height);
+            self.init.size = new_size;
+            self.init.config.width = new_size.width;
+            self.init.config.height = new_size.height;
+            self.init
+                .surface
+                .configure(&self.init.device, &self.init.config);
         }
     }
 
-   pub fn input(&mut self, event: &WindowEvent) -> bool {
+    pub fn input(&mut self, event: &WindowEvent) -> bool {
         match event {
             WindowEvent::KeyboardInput {
                 input:
@@ -217,9 +213,10 @@ impl State {
                 self.mouse_pressed = *state == ElementState::Pressed;
                 true
             }
-            WindowEvent::MouseInput {   
+            WindowEvent::MouseInput {
                 button: winit::event::MouseButton::Right,
-            ..} => {
+                ..
+            } => {
                 self.controller.set_to_origin(&mut self.camera);
                 true
             }
@@ -239,7 +236,6 @@ impl State {
     }
 
     pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
-        //let output = self.init.surface.get_current_frame()?.output;
         let output = self.init.surface.get_current_texture()?;
         let view = output
             .texture
@@ -280,7 +276,7 @@ impl State {
                             b: 0.314,
                             a: 1.0,
                         }),
-                        store: wgpu::StoreOp::Store
+                        store: wgpu::StoreOp::Store,
                     },
                 })],
                 depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
@@ -291,14 +287,15 @@ impl State {
                     }),
                     stencil_ops: None,
                 }),
-                timestamp_writes : None,
+                timestamp_writes: None,
                 occlusion_query_set: None,
             });
 
             render_pass.set_pipeline(&self.pipeline);
             render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
+            render_pass.set_index_buffer(self.index_buffer.slice(..),wgpu::IndexFormat::Uint16);
             render_pass.set_bind_group(0, &self.uniform_bind_group, &[]);
-            render_pass.draw(0..self.obj.vertices.len() as u32 , 0..1);
+            render_pass.draw_indexed(0..self.obj.indices.len() as u32 , 0,0..1);
         }
 
         self.init.queue.submit(iter::once(encoder.finish()));
