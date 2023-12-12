@@ -1,15 +1,15 @@
 use bytemuck::{Pod, Zeroable};
 use serde::{Deserialize, Serialize};
 use std::fs;
+
 #[derive(Serialize, Deserialize)]
 pub struct TdObject {
     pub vertices: Vec<Vertex>, // a vector of a Vertex struct (see line 29 or just go to type def in vscode)
     pub indices : Vec<u16>      // indices of the vertices
-    // TODO : material   should provide a union of material properties  (steel,reinforced concrete, etc.)
 }
 #[derive(Serialize, Deserialize)]
 struct JsonIn {
-    vers : Vec<[i8;3]>,
+    vers : Vec<[f32;3]>,
     inds : Vec<u16>
 }
 
@@ -32,14 +32,14 @@ pub struct Vertex {
     color: [f32; 4],
 }
 
-fn vertex(p: [i8; 3], c: [i8; 3]) -> Vertex {
+fn vertex(p: [f32; 3], c: [i8; 3]) -> Vertex {
     Vertex {
-        position: [p[0] as f32, p[1] as f32, p[2] as f32, 1.0],
+        position: [p[0],p[1],p[2],1.0],
         color: [c[0] as f32, c[1] as f32, c[2] as f32, 1.0],
     }
 }
 
-fn create_vertices(pos_from_json: Vec<[i8; 3]>) -> Vec<Vertex> {
+fn create_vertices(pos_from_json: Vec<[f32; 3]>) -> Vec<Vertex> {
     let col: [i8; 3] = [0, 0, 1];
     let mut data: Vec<Vertex> = Vec::with_capacity(pos_from_json.len());
     for i in pos_from_json {
