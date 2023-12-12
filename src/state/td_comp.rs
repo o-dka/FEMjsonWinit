@@ -1,7 +1,29 @@
 use bytemuck::{Pod, Zeroable};
 use serde::{Deserialize, Serialize};
 use std::fs;
+/*
+CUBE DATA 
+{
+      "vers": [
+            [0,0,0],
+            [0.5,0,0],
+            [0,-0.5,0],
+            [0.5,-0.5,0],
+            [0,0,0.5],
+            [0.5,0,0.5],
+            [0,-0.5,0.5],
+            [0.5,-0.5,0.5]
 
+      ],
+     "inds" : [
+      0,4,6,2,
+      0,1,3,7,5,
+      1,5,4,6,7,
+      3,2
+     ]
+}
+
+*/
 #[derive(Serialize, Deserialize)]
 pub struct TdObject {
     pub vertices: Vec<Vertex>, // a vector of a Vertex struct (see line 29 or just go to type def in vscode)
@@ -17,7 +39,6 @@ impl TdObject {
     pub fn new(filename : &str) -> Self {
         let  file_data =fs::read_to_string(filename) 
             .expect("FILE READ ERROR ");
-        
         let json_data:JsonIn = serde_json::from_str(&file_data).unwrap();
         let indices: Vec<u16> = json_data.inds;
         let vertices = create_vertices(json_data.vers);
@@ -32,18 +53,17 @@ pub struct Vertex {
     color: [f32; 4],
 }
 
-fn vertex(p: [f32; 3], c: [i8; 3]) -> Vertex {
+fn vertex(p: [f32; 3], c: [f32; 3]) -> Vertex {
     Vertex {
         position: [p[0],p[1],p[2],1.0],
-        color: [c[0] as f32, c[1] as f32, c[2] as f32, 1.0],
+        color :[c[0],c[1],c[3],1.0],
     }
 }
 
 fn create_vertices(pos_from_json: Vec<[f32; 3]>) -> Vec<Vertex> {
-    let col: [i8; 3] = [0, 0, 1];
     let mut data: Vec<Vertex> = Vec::with_capacity(pos_from_json.len());
     for i in pos_from_json {
-        data.push(vertex(i, col));
+        data.push(vertex(i, [0.0, 0.0, 1.0]));
     }
     data.to_vec()
 }
